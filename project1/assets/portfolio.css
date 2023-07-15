@@ -1,0 +1,94 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body.maincontent {
+    min-width: 100vw;
+    min-height: 100vh;
+    font-size: 14pt;
+}
+
+header {
+    overflow: hidden;
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+}
+header > img.heroImage {
+    object-fit: cover;
+}
+
+
+
+div.CTYTitle {
+    position: absolute;
+    top: 10%;
+    left: 20%;
+    font-size: 3rem;
+    color: white;
+    font-weight: bold;
+}
+
+div.myName {
+
+    position: absolute;
+    right: 20%;
+    bottom: 30%;
+}
+div.myName > div {
+    font-size: 3rem;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+}
+
+img.meImage {
+    position: absolute;
+    border-radius: 50%;
+    max-width: 100%;
+}
+
+section.projectCard {
+    border-radius: 10px;
+    width: 90vw;
+    margin: auto;
+    margin-top: 1em;
+    border: 2px solid black;
+    padding: 0.5em;
+}
+section.projectCard > .projectTitle {
+    background: rgb( 1, 50, 32 );
+    color: white;
+    border-radius: 10px;
+    font-size: 3rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+section.projectCard > .projectDescription {
+    display: flex;
+    margin-top: 0.5em;
+}
+
+.projectDescription > img {
+    border-radius: 10px;
+    max-width: 25%;
+    margin-right: 0.5em;
+}
+
+.projectDescription > a {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: auto;
+
+    font-size: 16pt;
+    text-decoration: none;
+    color: white;
+    background: rgb( 1, 50, 32 );
+    
+    padding: 0.5em;
+    border-radius: 5px;
+}

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+        <link rel="stylesheet" href="assets/drawer.css"/>
+    </head>
+    <body class="maincontent">
+        <div id="spacePalette">
+            <div class="buttonBar">
+                <button id="removeDrawingSpace"> &#128196; </button>
+                <button id="sortLabels" class="unsorted"><span></span></button>
+                <button id="addDrawingSpace">&#128196;</button>
+            </div>
+            
+            <div class="scrollingList">
+                <div class="workspaceLabel active"><input value="Untitled" /></div>
+            </div>
+            <div class="buttonBar">
+                <button class='loading' id="loadSpaces"> &#11014; </button>
+                <button class='loading' id="saveSpaces">&#11015;</button>
+            </div>            
+        </div>
+        <div id="canvasHolder">
+            <canvas id='canvas'></canvas>
+        </div>
+        
+        <script src="bst.js"></script>
+        <script src="linkedlist.js"></script>
+        <script src="huffman.js"></script>
+        <script src="tool.js"></script>
+        <script src="linetool.js"></script>
+        <script src="drawingspace.js"></script>
+        <script type="module">
+
+            /* 
+             * uuid - uniquly identify each drawingspace
+             * canvas - the active drawing area on the screen
+             * allDrwings - all known drawing spaces
+             * activeLabel - the label of the current drawing space
+             * activeDrawing - the current set of shapes to display
+             * selectedTool - the shape to create when wanting a new shape
+             */
+            let uuid = 0;
+            let canvas = null;
+            let allDrawings = new Map();
+            let activeLabel = null;
+            let activeDrawing = null;
+            let selectedTool = LineTool;
+
+            /**
+             * The default ordering of labels. We sort by
+             * workspace title THEN by unique ID.
+             */
+            let sortOrder = 'unsorted'
+            let bst = new BST(function(a,b){
+                let left = a.querySelector('input')
+                let right = b.querySelector('input')
+
+                let strCompare = left.value.localeCompare(right.value);
+
+                // Titles are the same, so compare UUIDs
+                if( strCompare === 0 ){
+                    left = a.getAttribute('data-uuid')
+                    right = b.getAttribute('data-uuid');
+                    strCompare = left.localeCompare(right);
+                }
+                return strCompare;
+            })
+    
+            /**
+             * Intializes the canvas and spplication
+             */
+            function init() {
+                canvas = document.getElementById('canvas')
+                let vw = canvas.clientWidth;
+                let vh = canvas.clientHeight;
+
+                /*
+                 * Set the number of pixels in the canvas to match screen
+                 */
+                canvas.width = vw;
+                canvas.height = vh;
+
+                activeLabel = document.querySelector('div.workspaceLabel.active')
+                activeLabel.setAttribute('data-uuid', uuid)
+                uuid += 1
+
+                activeDrawing = new DrawingSpace(canvas);
+                allDrawings.set(activeLabel, activeDrawing);
+                
+                bst.insert(activeLabel);
+
+                document.getElementById('addDrawingSpace').addEventListener('click', addWorkspace);
+                document.getElementById('removeDrawingSpace').addEventListener('click', removeActiveWorkspace);
+                document.getElementById('sortLabels').addEventListener('click', changeSortingOrder)
+
+                document.getElementById('loadSpaces').addEventListener('click', loadSpaces);
+                document.getElementById('saveSpaces').addEventListener('click', saveSpaces);
+
+                activeLabel.addEventListener('click', handleWorkspaceClick);
+                activeLabel.addEventListener('dblclick', handleChangeNameStart)
+
+                canvas.addEventListener( "mousedown", handleMouseDown);
+                canvas.addEventListener( "mousemove", handleMouseMove);
+                canvas.addEventListener("mouseup", handleMouseUp);
+                canvas.addEventListener("dblclick", handleDoubleClick);
+            }
+
+            /*
+             * Delegates all mouse events to the active drawing.
+             * We can also add application-wide responses here
+             */
+            function handleMouseDown( event ){
+                activeDrawing.handleMouseDown(event, selectedTool);
+            }
+
+            function handleMouseUp( event ) {
+                activeDrawing.handleMouseUp(event, selectedTool)
+            }
+
+            function handleMouseMove( event ){
+                activeDrawing.handleMouseMove(event, selectedTool);
+            }
+            function handleDoubleClick( event ){
+                activeDrawing.handleDoubleClick(event, selectedTool);
+            }
+
+
+            /**
+             * Tab management (changing, adding, deleting workspaces)
+             */
+            function handleWorkspaceClick(event){
+                changeWorkspace(event.target);
+            }
+
+            /**
+             * Adds a workspace and switches to it.
+             * @param event the event causing the addition
+             * @return a new label for the workspace
+             */
+            function addWorkspace(event){
+                
+                /**
+                 * Create a new label with unique ID
+                 * and associate it with a new DrawingSpace
+                 */
+                let newSpace = new DrawingSpace(canvas)
+                let palette = document.querySelector('#spacePalette>.scrollingList');
+                let label = activeLabel.cloneNode(true);
+                label.addEventListener('click', handleWorkspaceClick)
+                label.addEventListener('dblclick', handleChangeNameStart)
+
+                label.querySelector('input').value = "Untitled"
+                label.setAttribute('data-uuid', uuid)
+                uuid += 1
+                
+                /**
+                 * Actually add the label and drawing space to the screen
+                 * and switch to it
+                 */
+                allDrawings.set(label, newSpace);
+                palette.appendChild(label);
+                bst.insert(label)
+                changeWorkspace(label)
+
+                arrangeGraphicalList();
+                return label;
+            }
+            function removeActiveWorkspace(event){
+                let palette = document.querySelector('#spacePalette>.scrollingList');
+                
+                /**
+                 * Remove the active tab and switch to the next one available
+                 * if there isn't one available, the make one so that 
+                 * one will always exist
+                 */
+                if(activeLabel != null ){
+                    let nextActiveLabel = activeLabel.previousElementSibling;
+                    if(nextActiveLabel == null ){
+                        nextActiveLabel = activeLabel.nextElementSibling;
+                    }
+
+                    allDrawings.delete(activeLabel)
+                    palette.removeChild(activeLabel)
+                    bst.remove(activeLabel);
+
+                    if(nextActiveLabel == null ) {
+                        let newSpace = addWorkspace(event);
+                        nextActiveLabel = newSpace;
+                    }
+                    changeWorkspace(nextActiveLabel);
+                }
+            }
+
+            /**
+             * User doubled clicked on a tab to change the same,
+             * so start the process by do graphical changes
+             */
+            function handleChangeNameStart(event){
+                /**
+                 * Handles when the changing of a tab name ends
+                 */
+                function handleChangeNameEnd(event){
+                    // Escape pressed, go back to original
+                    if( event.keyCode == 27 ){
+                        event.target.value = oldVal;
+                    }
+                    // Enter is pressed so end the input and keep it
+                    else if( event.keyCode == 13 ){
+                        if(event.target.value !== '' ){
+                            oldVal = event.target.value                           
+                        }
+                        event.target.blur();
+                    }
+                }
+
+                /**
+                 * Handles if the user clicks out of the input box without
+                 * pressing escape or enter
+                 */
+                function handleBlur(event){
+                    event.target.value = oldVal;
+                    allDrawings.get(element).setName(oldVal)
+                    bst.insert(element);
+                    
+                    event.target.removeEventListener('keydown',handleChangeNameEnd)
+                    event.target.removeEventListener('blur', handleBlur)
+                    arrangeGraphicalList();                    
+                }
+
+                let element = bst.remove(event.target);
+                let input = event.target.querySelector('input');
+                let oldVal = input.value;
+
+                
+                input.select();
+                input.focus();
+                input.addEventListener('keydown', handleChangeNameEnd);
+                input.addEventListener('blur', handleBlur)
+            }
+
+            /**
+             * Allow changing the active workspace. This function
+             * take a graphical label and find the correct drawingspace
+             * 
+             * @param target the label to make active
+             */
+            function changeWorkspace(target){
+                activeLabel.classList.remove('active');
+                target.classList.add('active');
+                activeDrawing = allDrawings.get(target);
+                activeLabel = target
+
+                if( activeDrawing !== null ){
+                    activeDrawing.render()
+                }
+            }
+            
+            /**
+             * Handles the ordering and changing of sorting order
+             * when use click the Sort button
+             */
+            function changeSortingOrder(event){
+                const order = {
+                    'unsorted':'ascend',
+                    'ascend':'descend',
+                    'descend':'unsorted'
+                };
+
+                event.target.classList.remove(sortOrder);
+                sortOrder = order[sortOrder]
+                event.target.classList.add(sortOrder)
+                
+                arrangeGraphicalList()
+            }
+
+            /**
+             * Actually resets the on-screen list
+             */
+            function arrangeGraphicalList(){
+                if( sortOrder !== 'unsorted' ){
+                    let orderedItems = bst.inOrder()
+                    const sList = document.querySelector('.scrollingList');
+                    sList.innerHTML = '';
+                    
+                    if( sortOrder == 'descend' ){
+                        orderedItems = orderedItems.reverse();
+                    }
+                    
+                    for( let item of orderedItems ){
+                        sList.appendChild(item);
+                    }
+                }
+            }
+
+            /**
+             * Load drawing spaces from a text file
+             */
+            function loadSpaces(event){
+                let fileInput = document.createElement('input')
+                fileInput.setAttribute('type', 'file')
+                fileInput.addEventListener('change', function(event){
+                    let file = event.target.files[0]
+                    let reader = new FileReader();
+                    reader.onload = function(event){
+                        let json = JSON.parse(event.target.result)
+                        
+                        let drawing = null;
+                        for( let ws of json.data ){
+                            let label = addWorkspace(null);
+                            let nameInput = label.querySelector('input')
+
+                            drawing = DrawingSpace.fromJSON(ws, canvas)
+                            nameInput.value = drawing.name
+                            allDrawings.set(label, drawing)
+                        }
+
+                        activeDrawing = drawing
+                        activeDrawing.render()
+                        arrangeGraphicalList();
+                    }
+                    reader.readAsText(file)
+                })
+                fileInput.click();
+            }
+
+            /**
+             * Save DrawingSpaces to a text file
+             */
+            function saveSpaces(event) {
+                let saveMe = {
+                    data: []
+                }
+
+                for( let [label, space] of allDrawings ){
+                    saveMe.data.push(space.toJSON())
+                }
+
+                const saveLink = document.createElement('a')
+                let blob = new Blob([JSON.stringify(saveMe)], {
+                    type: 'text/plain'
+                })
+                saveLink.setAttribute('href', URL.createObjectURL(blob))
+                saveLink.setAttribute('download', 'save-file.txt')
+                saveLink.click();
+                URL.revokeObjectURL(saveLink.href)
+
+            }
+
+
+            window.onload = init;
+        </script>
+    </body>
+</html>

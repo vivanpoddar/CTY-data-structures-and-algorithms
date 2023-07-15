@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+        <link rel="stylesheet" href="assets/drawer.css"/>
+    </head>
+    <body class="maincontent">
+        <canvas id='canvas'></canvas>
+        <!-- imports the following scripts as sources to apply to this code -->
+        <script src="linkedlist.js"></script>
+        <script src="tool.js"></script>
+        <script src="linetool.js"></script>
+        <script type="module">
+            let canvas = null;
+            let isMouseDown = false;
+            
+            // initiallizing variables to be a certain class
+            // sets the selectedTool to LineTool
+            // creates an object selectedShape of the selectedTool
+            let selectedTool = LineTool;
+            let selectedShape = new selectedTool()
+            let shapes = [selectedShape]
+
+            // sets up canvas
+            function init() {
+                // setting up js draw
+                canvas = document.getElementById('canvas')
+                // adapts to client's viewing specifications
+                let vw = canvas.clientWidth;
+                let vh = canvas.clientHeight;
+                
+                //setting up canvas sizes
+                canvas.width = vw;
+                canvas.height = vh;
+
+                // adding event listeners and declaring the functions get get invoked when the event is triggered
+                canvas.addEventListener( "mousedown", handleMouseDown);
+                canvas.addEventListener( "mousemove", handleMouseMove);
+                canvas.addEventListener("mouseup", handleMouseUp);
+                canvas.addEventListener("dblclick", handleDoubleClick);
+            }
+            
+            //checks if mouse is down, if it is it creates a point
+            function handleMouseDown( event ){
+                let handled = false;
+
+                if( selectedShape !== null ){
+                    handled = selectedShape.handleMouseDown(event);
+                }
+
+                if( !handled ) {
+                    for( let shape of shapes ){
+                        handled = shape.handleMouseDown(event);
+                        if( handled ) {
+                            selectedShape = shape;
+                            break;
+                        }
+                    }
+
+                    if( handled == false ){
+                        if(selectedShape != null ){
+                            selectedShape = null;
+                        }
+                        else {
+                            selectedShape = new selectedTool();
+                            shapes.push(selectedShape)
+                            handled = selectedShape.handleMouseDown(event);
+                        }
+                    }
+                }
+
+                render();
+                isMouseDown = true;
+            }
+            
+            //when mouse is released 
+            function handleMouseUp( event ) {
+                if( selectedShape !== null ){
+                    selectedShape.handleMouseUp(event);
+                    render();
+                }
+                isMouseDown = false;
+            }
+
+            //when mouse is moved
+            function handleMouseMove( event ){
+                if( selectedShape !== null ){
+                    selectedShape.handleMouseMove(event);
+                    render();
+                }
+            }
+
+            //when mouse is double clicked
+            function handleDoubleClick( event ){
+                if( selectedShape !== null ){
+                    selectedShape.handleDoubleClick(event);
+                    render();
+                }
+            }
+
+            //erases the canvas
+            function render() {
+                let ctx = canvas.getContext('2d')
+                ctx.clearRect(0,0, canvas.width, canvas.height)
+                for( let shape of shapes ){
+                    shape.render(canvas);
+                }
+            }
+
+            window.onload = init;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,185 @@
+* {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+:root {
+    --color-active-workspace: rgba(193,225,193,1);
+}
+
+body.maincontent{
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+}
+div#canvasHolder{
+    display: flex;
+    flex: 1;
+    overflow: scroll;
+}
+
+div#spacePalette {
+    display: flex;
+    flex-direction: column;
+    min-width: minmax(15%, 25%);
+    height: 100%;
+    
+    border: 2px solid black;
+}
+div.workspaceLabel {
+    padding: 0.25rem;
+    border-bottom: 2px solid black;
+}
+div.workspaceLabel.active {
+    font-weight:bold;
+    background: var(--color-active-workspace);
+}
+
+div.workspaceLabel > input{
+    pointer-events: none;
+    border: 0;
+    padding: 5px;
+    font-size: 1rem;
+    background: white;
+}
+div.workspaceLabel.active > input{
+    border: 0;
+    padding: 5px;
+    font-size: 1rem;
+    font-weight: bold;
+    background: var(--color-active-workspace);
+}
+div.workspaceLabel > input:focus{
+    border: 5;
+    font-size: 1rem;
+}
+
+div.scrollingList {
+    flex-grow: 1;
+    overflow-y: scroll;
+}
+div.buttonBar{
+    display: flex;
+    justify-content: space-between;
+    min-height: minmax(100px, 25%);
+}
+div.buttonBar > button {
+    min-width: 25%;
+    min-height: 72px;
+    aspect-ratio: 1 / 1;
+
+    font-size: 3vw;
+}
+
+
+button#addDrawingSpace,
+button#removeDrawingSpace{
+    position: relative;
+    font-size:2rem;
+}
+button#addDrawingSpace::after{
+    content: '\2795';
+    height: 25%;
+    aspect-ratio: 1 / 1;
+    
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+button#removeDrawingSpace::after {
+    content: '\1F6AB';
+    height: 25%;
+    aspect-ratio: 1 / 1;
+
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+
+/* Sorting Button Graphics */
+button#sortLabels {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    justify-content: center;
+}
+
+#sortLabels > span {
+    display: block;
+    pointer-events: none;
+    position: relative;
+    background: black;
+
+    width: 50%;
+    height: 10%;
+    transition: width .25s ease-in-out;
+}
+#sortLabels > span::before {
+    content: "";
+    display: block;
+    position: absolute;
+    background: black;
+
+    width: 50%;
+    height: 100%;
+    top: 200%;
+    transition: width .25s ease-in-out;
+}
+#sortLabels > span::after {
+    content: "";
+    display: block;
+    position: absolute;
+    background: black;
+
+    width: 50%;
+    height: 100%;
+    top: -200%;
+    left: 50%;
+    transition: left .25s ease-in-out, width .25s ease-in-out;
+}
+
+#sortLabels.descend > span::before {
+    content: "";
+    display: block;
+    position: absolute;
+    background: black;
+
+    width: 50%;
+    height: 100%;
+    top: 200%;
+}
+#sortLabels.descend > span::after {
+    content: "";
+    display: block;
+    position: absolute;
+    background: black;
+
+    left: 0%;
+    width: 125%;
+    height: 100%;
+    top: -200%;
+}
+
+#sortLabels.ascend > span::before {
+    content: "";
+    display: block;
+    position: absolute;
+    background: black;
+
+    width: 125%;
+    height: 100%;
+    top: 200%;
+}
+#sortLabels.ascend > span::after {
+    content: "";
+    display: block;
+    position: absolute;
+    background: black;
+
+    left: 0;
+    width: 50%;
+    height: 100%;
+    top: -200%;
+}
